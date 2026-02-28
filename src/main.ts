@@ -8,6 +8,8 @@ import { loadConfig, saveConfig, resetConfig, compileConfig, type SanitizerConfi
 import { copyToClipboard, openPrivateBin, openGist } from './clipboard'
 import { createShortNotice, createPiiWarning, createFullDisclaimer } from './disclaimer'
 
+const MAX_INPUT_BYTES = 512 * 1024
+
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   attrs?: Record<string, string>,
@@ -261,6 +263,17 @@ function init(): void {
     const raw = input.value
     if (!raw.trim()) {
       errorDiv.textContent = 'Please paste some Docker Compose YAML first.'
+      errorDiv.classList.remove('hidden')
+      output.classList.add('hidden')
+      piiWarning.classList.add('hidden')
+      actions.classList.add('hidden')
+      statsDiv.classList.add('hidden')
+      advisoriesDiv.replaceChildren()
+      return
+    }
+
+    if (new Blob([raw]).size > MAX_INPUT_BYTES) {
+      errorDiv.textContent = 'Input too large. Maximum 512 KB.'
       errorDiv.classList.remove('hidden')
       output.classList.add('hidden')
       piiWarning.classList.add('hidden')
