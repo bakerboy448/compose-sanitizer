@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { renderVolumeTable } from '../src/volume-table'
+import { renderServiceTable, renderVolumeTable } from '../src/volume-table'
 import type { ServiceInfo } from '../src/services'
 
 function makeService(overrides: Partial<ServiceInfo> & { name: string }): ServiceInfo {
@@ -13,6 +13,70 @@ function makeService(overrides: Partial<ServiceInfo> & { name: string }): Servic
     ...overrides,
   }
 }
+
+describe('renderServiceTable', () => {
+  it('returns empty wrapper for no services', () => {
+    const container = renderServiceTable([])
+    expect(container.querySelector('table')).toBeNull()
+  })
+
+  it('renders base columns: Service, Image, Ports, Networks', () => {
+    const services = [
+      makeService({ name: 'app', image: 'nginx:latest', ports: ['80:80'], networks: ['frontend'] }),
+    ]
+    const container = renderServiceTable(services)
+    const ths = container.querySelectorAll('th')
+    expect(ths[0]!.textContent).toBe('Service')
+    expect(ths[1]!.textContent).toBe('Image')
+    expect(ths[2]!.textContent).toBe('Ports')
+    expect(ths[3]!.textContent).toBe('Networks')
+  })
+
+  it('renders service data in rows', () => {
+    const services = [
+      makeService({ name: 'plex', image: 'plex:latest', ports: ['32400:32400'], networks: ['media'] }),
+    ]
+    const container = renderServiceTable(services)
+    const tds = container.querySelectorAll('tbody td')
+    expect(tds[0]!.textContent).toBe('plex')
+    expect(tds[1]!.textContent).toBe('plex:latest')
+    expect(tds[2]!.textContent).toBe('32400:32400')
+    expect(tds[3]!.textContent).toBe('media')
+  })
+
+  it('shows dash for empty ports and networks', () => {
+    const services = [makeService({ name: 'app', image: 'nginx' })]
+    const container = renderServiceTable(services)
+    const tds = container.querySelectorAll('tbody td')
+    expect(tds[2]!.textContent).toBe('\u2014')
+    expect(tds[3]!.textContent).toBe('\u2014')
+  })
+
+  it('includes extras as dynamic columns', () => {
+    const services = [
+      makeService({ name: 'app', image: 'nginx', extras: new Map([['restart', 'unless-stopped']]) }),
+      makeService({ name: 'db', image: 'postgres', extras: new Map([['restart', 'always'], ['hostname', 'pg-host']]) }),
+    ]
+    const container = renderServiceTable(services)
+    const ths = container.querySelectorAll('th')
+    const headers = Array.from(ths).map(th => th.textContent)
+    expect(headers).toContain('restart')
+    expect(headers).toContain('hostname')
+
+    // app row: has restart, no hostname
+    const rows = container.querySelectorAll('tbody tr')
+    const appCells = rows[0]!.querySelectorAll('td')
+    const restartIdx = headers.indexOf('restart')
+    const hostnameIdx = headers.indexOf('hostname')
+    expect(appCells[restartIdx]!.textContent).toBe('unless-stopped')
+    expect(appCells[hostnameIdx]!.textContent).toBe('\u2014')
+
+    // db row: has both
+    const dbCells = rows[1]!.querySelectorAll('td')
+    expect(dbCells[restartIdx]!.textContent).toBe('always')
+    expect(dbCells[hostnameIdx]!.textContent).toBe('pg-host')
+  })
+})
 
 describe('renderVolumeTable', () => {
   it('returns empty div for no services', () => {

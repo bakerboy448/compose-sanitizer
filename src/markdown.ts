@@ -35,18 +35,31 @@ export function generateVolumeComparisonMarkdown(services: readonly ServiceInfo[
 export function generateMarkdownTable(services: readonly ServiceInfo[]): string {
   if (services.length === 0) return ''
 
-  const header = '| Service | Image | Ports | Volumes | Networks |'
-  const separator = '| --- | --- | --- | --- | --- |'
+  // Collect extra keys across all services
+  const extraKeys: string[] = []
+  const seen = new Set<string>()
+  for (const svc of services) {
+    for (const key of svc.extras.keys()) {
+      if (!seen.has(key)) {
+        seen.add(key)
+        extraKeys.push(key)
+      }
+    }
+  }
+
+  const columns = ['Service', 'Image', 'Ports', 'Networks', ...extraKeys]
+  const header = `| ${columns.join(' | ')} |`
+  const separator = `| ${columns.map(() => '---').join(' | ')} |`
 
   const rows = services.map(svc => {
-    const cells = [
+    const baseCells = [
       escapeCell(svc.name),
       escapeCell(svc.image),
       escapeCell(joinField([...svc.ports])),
-      escapeCell(joinField([...svc.volumes])),
       escapeCell(joinField([...svc.networks])),
     ]
-    return `| ${cells.join(' | ')} |`
+    const extraCells = extraKeys.map(key => escapeCell(svc.extras.get(key) ?? ''))
+    return `| ${[...baseCells, ...extraCells].join(' | ')} |`
   })
 
   return [header, separator, ...rows].join('\n')

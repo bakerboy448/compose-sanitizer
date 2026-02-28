@@ -11,7 +11,7 @@ import { el } from './dom'
 import { parseServices } from './services'
 import { generateMarkdownTable, generateVolumeComparisonMarkdown } from './markdown'
 import { renderCards } from './cards'
-import { renderVolumeTable } from './volume-table'
+import { renderServiceTable, renderVolumeTable } from './volume-table'
 
 const MAX_INPUT_BYTES = 512 * 1024
 
@@ -378,24 +378,33 @@ function init(): void {
             while (cards.firstChild) {
               cardsContainer.appendChild(cards.firstChild)
             }
+            // Render service overview table
+            const svcTable = renderServiceTable(services)
+            volumesContainer.appendChild(svcTable)
+
             // Render volume comparison table
             const volTable = renderVolumeTable(services)
             volumesContainer.appendChild(volTable)
 
             // Markdown preview textarea
+            const svcMd = generateMarkdownTable(services)
             const volMd = generateVolumeComparisonMarkdown(services)
-            if (volMd) {
+            const mdParts: string[] = []
+            if (svcMd) mdParts.push(svcMd)
+            if (volMd) mdParts.push(volMd)
+            if (mdParts.length > 0) {
+              const combinedMd = mdParts.join('\n\n')
               const mdLabel = el('label')
               mdLabel.textContent = 'Markdown (for pasting into Discord / GitHub):'
               mdLabel.style.marginTop = '0.75rem'
               volumesContainer.appendChild(mdLabel)
               const mdPreview = el('textarea', {
                 className: 'code-textarea',
-                rows: String(Math.min(volMd.split('\n').length + 1, 12)),
+                rows: String(Math.min(combinedMd.split('\n').length + 1, 18)),
                 readonly: 'true',
                 spellcheck: 'false',
               })
-              mdPreview.value = volMd
+              mdPreview.value = combinedMd
               volumesContainer.appendChild(mdPreview)
             }
           }

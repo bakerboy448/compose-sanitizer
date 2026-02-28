@@ -31,15 +31,14 @@ describe('generateMarkdownTable', () => {
     ]
     const result = generateMarkdownTable(services)
     const lines = result.split('\n')
-    // Header row
-    expect(lines[0]).toBe('| Service | Image | Ports | Volumes | Networks |')
+    // Header row (no Volumes column — volumes are in separate comparison table)
+    expect(lines[0]).toBe('| Service | Image | Ports | Networks |')
     // Separator
-    expect(lines[1]).toBe('| --- | --- | --- | --- | --- |')
+    expect(lines[1]).toBe('| --- | --- | --- | --- |')
     // Data row
     expect(lines[2]).toContain('sonarr')
     expect(lines[2]).toContain('linuxserver/sonarr:latest')
     expect(lines[2]).toContain('8989:8989')
-    expect(lines[2]).toContain('/config:/config, /data:/data')
     expect(lines[2]).toContain('default')
   })
 
@@ -62,8 +61,25 @@ describe('generateMarkdownTable', () => {
     const result = generateMarkdownTable(services)
     expect(result).not.toContain('undefined')
     const lines = result.split('\n')
-    // Data row should have empty cells for ports, volumes, networks
-    expect(lines[2]).toBe('| minimal | nginx |  |  |  |')
+    // Data row should have empty cells for ports, networks
+    expect(lines[2]).toBe('| minimal | nginx |  |  |')
+  })
+
+  it('includes extras columns dynamically', () => {
+    const services = [
+      makeService({ name: 'app', image: 'nginx', extras: new Map([['restart', 'unless-stopped'], ['hostname', 'app-host']]) }),
+      makeService({ name: 'db', image: 'postgres', extras: new Map([['restart', 'always']]) }),
+    ]
+    const result = generateMarkdownTable(services)
+    const lines = result.split('\n')
+    // Header includes extras
+    expect(lines[0]).toContain('restart')
+    expect(lines[0]).toContain('hostname')
+    // app row has both
+    expect(lines[2]).toContain('unless-stopped')
+    expect(lines[2]).toContain('app-host')
+    // db row has restart but empty hostname
+    expect(lines[3]).toContain('always')
   })
 
   it('escapes pipe characters in field values', () => {
