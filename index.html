@@ -6,6 +6,265 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'">
   <title>Docker Compose Sanitizer</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --surface: #16213e;
+      --border: #0f3460;
+      --text: #e0e0e0;
+      --text-muted: #a0a0a0;
+      --primary: #e94560;
+      --primary-hover: #d63851;
+      --secondary: #0f3460;
+      --secondary-hover: #1a4a7a;
+      --error-bg: #3d1c1c;
+      --error-text: #ff6b6b;
+      --warning-bg: #3d3a1c;
+      --warning-text: #ffd93d;
+      --advisory-bg: #1c2d3d;
+      --advisory-border: #2a5a8a;
+      --stats-bg: #1c3d2a;
+      --stats-text: #6bcb77;
+      --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+      --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f5f5f5;
+        --surface: #ffffff;
+        --border: #d0d0d0;
+        --text: #1a1a1a;
+        --text-muted: #666666;
+        --primary: #d63851;
+        --primary-hover: #c02040;
+        --secondary: #e8e8e8;
+        --secondary-hover: #d0d0d0;
+        --error-bg: #fff0f0;
+        --error-text: #cc0000;
+        --warning-bg: #fff8e0;
+        --warning-text: #8a7000;
+        --advisory-bg: #e8f0ff;
+        --advisory-border: #a0c0e8;
+        --stats-bg: #e8ffe8;
+        --stats-text: #2a7a2a;
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    #app {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    header { margin-bottom: 1.5rem; }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+      color: var(--text-muted);
+    }
+
+    .code-textarea {
+      width: 100%;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      resize: vertical;
+      tab-size: 2;
+    }
+
+    .code-textarea:focus {
+      outline: 2px solid var(--primary);
+      outline-offset: -1px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.55rem 1.2rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      margin: 0.75rem 0;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+
+    .btn-secondary {
+      background: var(--secondary);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover:not(:disabled) { background: var(--secondary-hover); }
+
+    .error {
+      background: var(--error-bg);
+      color: var(--error-text);
+      padding: 0.75rem;
+      border-radius: 6px;
+      margin: 0.75rem 0;
+      font-size: 0.9rem;
+    }
+
+    .stats {
+      background: var(--stats-bg);
+      color: var(--stats-text);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      margin: 0.75rem 0;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .notice {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+    }
+
+    .pii-warning {
+      background: var(--warning-bg);
+      color: var(--warning-text);
+      padding: 0.6rem 0.75rem;
+      border-radius: 6px;
+      margin: 0.75rem 0;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .advisories { margin: 0.75rem 0; }
+
+    .advisory {
+      background: var(--advisory-bg);
+      border: 1px solid var(--advisory-border);
+      border-radius: 6px;
+      padding: 0.6rem 0.75rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .advisory-icon { margin-right: 0.4rem; }
+
+    .advisory-services {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .advisory a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .advisory a:hover { text-decoration: underline; }
+
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin: 0.75rem 0;
+    }
+
+    .settings {
+      margin: 1.5rem 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .settings summary {
+      padding: 0.6rem 0.75rem;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .settings-form {
+      padding: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .settings-form label {
+      margin-top: 0.75rem;
+    }
+
+    .settings-textarea {
+      width: 100%;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.5rem;
+      resize: vertical;
+    }
+
+    .settings-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .disclaimer {
+      margin-top: 2rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .disclaimer summary {
+      padding: 0.6rem 0.75rem;
+      cursor: pointer;
+    }
+
+    .disclaimer p {
+      padding: 0.75rem;
+      border-top: 1px solid var(--border);
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
   <div id="app"></div>
