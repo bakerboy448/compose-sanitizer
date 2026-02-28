@@ -1,11 +1,25 @@
 name: Feature Request
-description: Suggest an improvement or new feature
+description: Suggest an improvement to the compose sanitizer
 labels: [enhancement]
 body:
   - type: markdown
     attributes:
       value: |
-        **This tracker is for feature requests only.** For support questions, visit the relevant community channels.
+        **This tracker is for feature requests only.** Not for general Docker/compose support.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - New redaction pattern (detect additional sensitive values)
+        - New noise filter (strip additional generated fields)
+        - New advisory (detect additional misconfigurations)
+        - Input format support (new input types)
+        - Output / sharing (clipboard, export options)
+        - UI / UX improvement
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:
@@ -17,11 +31,6 @@ body:
     id: use-case
     attributes:
       label: Use case
-      description: Why is this needed? What problem does it solve?
+      description: Why is this needed? Include example YAML if relevant.
     validations:
       required: true
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives considered
-      description: Have you considered any workarounds?

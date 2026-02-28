@@ -1,11 +1,25 @@
 name: Bug Report
-description: Report a bug in the sanitizer
+description: Report a bug in the compose sanitizer
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        **This tracker is for bugs only.** For support questions, visit the relevant community channels (e.g., Discord, forums).
+        **This tracker is for bugs only.** Not for general Docker/compose support.
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Redaction (sensitive value not caught or safe value wrongly redacted)
+        - Noise stripping (field not removed or wrong field removed)
+        - Advisory (false positive or missed detection)
+        - Input extraction (YAML not parsed from pasted output)
+        - UI / display issue
+        - Build / deployment
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:
@@ -18,6 +32,17 @@ body:
     attributes:
       label: Expected behavior
       description: What should have happened?
+    validations:
+      required: true
+  - type: dropdown
+    id: input-type
+    attributes:
+      label: Input type
+      options:
+        - docker-autocompose output
+        - docker compose config output
+        - Raw docker-compose.yml
+        - Other
     validations:
       required: true
   - type: textarea
