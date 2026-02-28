@@ -85,6 +85,17 @@ describe('config', () => {
     expect(compiled.safeKeys.has('OTHER')).toBe(false)
   })
 
+  it('compileConfig skips invalid regex patterns gracefully', () => {
+    const config = {
+      sensitivePatterns: ['valid', '[invalid', 'also_valid'],
+      safeKeys: ['PUID'],
+    }
+    const compiled = compileConfig(config)
+    expect(compiled.sensitivePatterns).toHaveLength(2)
+    expect(compiled.sensitivePatterns[0].source).toBe('valid')
+    expect(compiled.sensitivePatterns[1].source).toBe('also_valid')
+  })
+
   it('loadConfig rejects non-string array elements in sensitivePatterns', () => {
     localStorage.setItem('compose-sanitizer-config', JSON.stringify({
       sensitivePatterns: ['valid', 123],
