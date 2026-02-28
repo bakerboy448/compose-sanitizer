@@ -3,7 +3,7 @@ import { extractYaml } from './extract'
 import { redactCompose } from './redact'
 import { stripNoise } from './noise'
 import { detectAdvisories, type Advisory } from './advisories'
-import { loadConfig, saveConfig, resetConfig, type SanitizerConfig } from './config'
+import { loadConfig, saveConfig, resetConfig, compileConfig, type SanitizerConfig } from './config'
 import { copyToClipboard, openPrivateBin, openGist } from './clipboard'
 import { createShortNotice, createPiiWarning, createFullDisclaimer } from './disclaimer'
 
@@ -38,7 +38,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return element
 }
 
-function sanitize(raw: string): {
+function sanitize(raw: string, config: SanitizerConfig): {
   output: string | null
   error: string | null
   stats: { redactedEnvVars: number; redactedEmails: number; anonymizedPaths: number }
@@ -51,7 +51,8 @@ function sanitize(raw: string): {
     return { output: null, error: extracted.error, stats: emptyStats, advisories: [] }
   }
 
-  const result = redactCompose(extracted.yaml)
+  const compiled = compileConfig(config)
+  const result = redactCompose(extracted.yaml, compiled)
   if (result.error !== null) {
     return { output: null, error: result.error, stats: emptyStats, advisories: [] }
   }
@@ -276,7 +277,7 @@ function init(): void {
     sanitizeBtn.textContent = 'Sanitizing...'
 
     try {
-      const result = sanitize(raw)
+      const result = sanitize(raw, currentConfig)
 
       if (result.error !== null) {
         errorDiv.textContent = result.error

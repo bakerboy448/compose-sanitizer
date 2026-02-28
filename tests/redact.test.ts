@@ -170,4 +170,60 @@ services:
     expect(result.error).toBeNull()
     expect(result.output).not.toContain('user@example.com')
   })
+
+  it('uses custom sensitive patterns when provided', () => {
+    const input = `
+services:
+  app:
+    environment:
+      MY_CUSTOM_THING: should-be-redacted
+      NORMAL_VAR: keep-this
+`
+    const customConfig = {
+      sensitivePatterns: [/custom_thing/i],
+      safeKeys: new Set<string>(),
+    }
+    const result = redactCompose(input, customConfig)
+    expect(result.error).toBeNull()
+    expect(result.output).not.toContain('should-be-redacted')
+    expect(result.output).toContain('keep-this')
+    expect(result.stats.redactedEnvVars).toBe(1)
+  })
+
+  it('respects custom safe keys to skip redaction', () => {
+    const input = `
+services:
+  app:
+    environment:
+      AUTH_TOKEN: should-be-safe
+      SECRET: should-be-redacted
+`
+    const customConfig = {
+      sensitivePatterns: [/secret/i, /auth/i, /token/i],
+      safeKeys: new Set(['AUTH_TOKEN']),
+    }
+    const result = redactCompose(input, customConfig)
+    expect(result.error).toBeNull()
+    expect(result.output).toContain('should-be-safe')
+    expect(result.output).not.toContain('should-be-redacted')
+    expect(result.stats.redactedEnvVars).toBe(1)
+  })
+
+  it('uses custom config with array-style env vars', () => {
+    const input = `
+services:
+  app:
+    environment:
+      - 'CUSTOM_KEY=secret-value'
+      - 'NORMAL=keep-this'
+`
+    const customConfig = {
+      sensitivePatterns: [/custom_key/i],
+      safeKeys: new Set<string>(),
+    }
+    const result = redactCompose(input, customConfig)
+    expect(result.error).toBeNull()
+    expect(result.output).toContain('CUSTOM_KEY=**REDACTED**')
+    expect(result.output).toContain('NORMAL=keep-this')
+  })
 })
