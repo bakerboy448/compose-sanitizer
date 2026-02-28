@@ -19,14 +19,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+export interface PatternConfig {
+  readonly sensitivePatterns?: readonly RegExp[]
+  readonly safeKeys?: ReadonlySet<string>
+}
+
 function redactEnvDict(
   env: Record<string, unknown>,
   stats: { redactedEnvVars: number; redactedEmails: number },
+  config: PatternConfig,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(env)) {
     const strValue = value == null ? '' : String(value)
-    if (isSensitiveKey(key)) {
+    if (isSensitiveKey(key, config.sensitivePatterns, config.safeKeys)) {
       result[key] = strValue === '' ? '' : REDACTED
       if (strValue !== '') stats.redactedEnvVars++
     } else if (containsEmail(strValue)) {
@@ -42,6 +48,7 @@ function redactEnvDict(
 function redactEnvArray(
   env: readonly unknown[],
   stats: { redactedEnvVars: number; redactedEmails: number },
+  config: PatternConfig,
 ): readonly string[] {
   return env.map(item => {
     const str = String(item)
@@ -51,7 +58,7 @@ function redactEnvArray(
     const key = str.slice(0, eqIdx)
     const value = str.slice(eqIdx + 1)
 
-    if (isSensitiveKey(key)) {
+    if (isSensitiveKey(key, config.sensitivePatterns, config.safeKeys)) {
       stats.redactedEnvVars++
       return `${key}=${REDACTED}`
     }
@@ -87,14 +94,15 @@ function anonymizeVolumes(
 function redactService(
   service: Record<string, unknown>,
   stats: { redactedEnvVars: number; redactedEmails: number; anonymizedPaths: number },
+  config: PatternConfig,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = { ...service }
 
   const env = service['environment']
   if (Array.isArray(env)) {
-    result['environment'] = redactEnvArray(env, stats)
+    result['environment'] = redactEnvArray(env, stats, config)
   } else if (isRecord(env)) {
-    result['environment'] = redactEnvDict(env, stats)
+    result['environment'] = redactEnvDict(env, stats, config)
   }
 
   const volumes = service['volumes']
@@ -105,7 +113,7 @@ function redactService(
   return result
 }
 
-export function redactCompose(raw: string): RedactResult {
+export function redactCompose(raw: string, config: PatternConfig = {}): RedactResult {
   const emptyStats: RedactStats = { redactedEnvVars: 0, redactedEmails: 0, anonymizedPaths: 0 }
 
   let parsed: unknown
@@ -134,7 +142,7 @@ export function redactCompose(raw: string): RedactResult {
   if (isRecord(services)) {
     const newServices: Record<string, unknown> = {}
     for (const [name, svc] of Object.entries(services)) {
-      newServices[name] = isRecord(svc) ? redactService(svc, stats) : svc
+      newServices[name] = isRecord(svc) ? redactService(svc, stats, config) : svc
     }
     compose['services'] = newServices
   }

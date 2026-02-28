@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { loadConfig, saveConfig, resetConfig, DEFAULT_CONFIG } from '../src/config'
+import { loadConfig, saveConfig, resetConfig, compileConfig, DEFAULT_CONFIG } from '../src/config'
 
 describe('config', () => {
   beforeEach(() => {
@@ -67,5 +67,30 @@ describe('config', () => {
     expect(DEFAULT_CONFIG.safeKeys).toContain('PUID')
     expect(DEFAULT_CONFIG.safeKeys).toContain('PGID')
     expect(DEFAULT_CONFIG.safeKeys).toContain('TZ')
+  })
+
+  it('compileConfig converts string patterns to RegExp and keys to Set', () => {
+    const config = {
+      sensitivePatterns: ['passw(or)?d', 'secret'],
+      safeKeys: ['PUID', 'TZ'],
+    }
+    const compiled = compileConfig(config)
+    expect(compiled.sensitivePatterns).toHaveLength(2)
+    expect(compiled.sensitivePatterns[0]).toBeInstanceOf(RegExp)
+    expect(compiled.sensitivePatterns[0].test('MY_PASSWORD')).toBe(true)
+    expect(compiled.sensitivePatterns[0].flags).toBe('i')
+    expect(compiled.safeKeys).toBeInstanceOf(Set)
+    expect(compiled.safeKeys.has('PUID')).toBe(true)
+    expect(compiled.safeKeys.has('TZ')).toBe(true)
+    expect(compiled.safeKeys.has('OTHER')).toBe(false)
+  })
+
+  it('loadConfig rejects non-string array elements in sensitivePatterns', () => {
+    localStorage.setItem('compose-sanitizer-config', JSON.stringify({
+      sensitivePatterns: ['valid', 123],
+      safeKeys: ['PUID'],
+    }))
+    const config = loadConfig()
+    expect(config.sensitivePatterns).toEqual(DEFAULT_CONFIG.sensitivePatterns)
   })
 })

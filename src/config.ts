@@ -26,12 +26,26 @@ export const DEFAULT_CONFIG: SanitizerConfig = {
   ],
 }
 
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every(x => typeof x === 'string')
+}
+
 function isValidConfig(value: unknown): value is Partial<SanitizerConfig> {
   if (typeof value !== 'object' || value === null) return false
   const obj = value as Record<string, unknown>
-  if (obj['sensitivePatterns'] !== undefined && !Array.isArray(obj['sensitivePatterns'])) return false
-  if (obj['safeKeys'] !== undefined && !Array.isArray(obj['safeKeys'])) return false
+  if (obj['sensitivePatterns'] !== undefined && !isStringArray(obj['sensitivePatterns'])) return false
+  if (obj['safeKeys'] !== undefined && !isStringArray(obj['safeKeys'])) return false
   return true
+}
+
+export function compileConfig(config: SanitizerConfig): {
+  readonly sensitivePatterns: readonly RegExp[]
+  readonly safeKeys: ReadonlySet<string>
+} {
+  return {
+    sensitivePatterns: config.sensitivePatterns.map(p => new RegExp(p, 'i')),
+    safeKeys: new Set(config.safeKeys),
+  }
 }
 
 export function loadConfig(): SanitizerConfig {
