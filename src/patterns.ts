@@ -1,3 +1,7 @@
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 export const DEFAULT_SENSITIVE_PATTERNS: readonly RegExp[] = [
   /passw(or)?d/i,
   /^pw$/i,

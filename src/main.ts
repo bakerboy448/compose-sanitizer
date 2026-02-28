@@ -1,4 +1,5 @@
 import { load, dump } from 'js-yaml'
+import { isRecord } from './patterns'
 import { extractYaml } from './extract'
 import { redactCompose } from './redact'
 import { stripNoise } from './noise'
@@ -6,10 +7,6 @@ import { detectAdvisories, type Advisory } from './advisories'
 import { loadConfig, saveConfig, resetConfig, compileConfig, type SanitizerConfig } from './config'
 import { copyToClipboard, openPrivateBin, openGist } from './clipboard'
 import { createShortNotice, createPiiWarning, createFullDisclaimer } from './disclaimer'
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,

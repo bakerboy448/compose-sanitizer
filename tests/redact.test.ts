@@ -72,6 +72,26 @@ services:
     expect(result.output).not.toContain('/root/')
   })
 
+  it('anonymizes home paths in long-form volume objects', () => {
+    const input = `
+services:
+  app:
+    volumes:
+      - type: bind
+        source: /home/john/config
+        target: /config
+      - type: bind
+        source: /mnt/data/media
+        target: /media
+`
+    const result = redactCompose(input)
+    expect(result.error).toBeNull()
+    expect(result.output).toContain('~/config')
+    expect(result.output).not.toContain('/home/john')
+    expect(result.output).toContain('/mnt/data/media')
+    expect(result.stats.anonymizedPaths).toBe(1)
+  })
+
   it('keeps container names, labels, networks, ports', () => {
     const input = `
 services:
