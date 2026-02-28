@@ -7,38 +7,16 @@ import { detectAdvisories, type Advisory } from './advisories'
 import { loadConfig, saveConfig, resetConfig, compileConfig, type SanitizerConfig } from './config'
 import { copyToClipboard, openPrivateBin, openGist } from './clipboard'
 import { createShortNotice, createPiiWarning, createFullDisclaimer } from './disclaimer'
+import { el } from './dom'
+import { parseServices } from './services'
+import { generateMarkdownTable } from './markdown'
+import { renderCards } from './cards'
 
 const MAX_INPUT_BYTES = 512 * 1024
 
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  attrs?: Record<string, string>,
-  children?: (HTMLElement | string)[],
-): HTMLElementTagNameMap[K] {
-  const element = document.createElement(tag)
-  if (attrs) {
-    for (const [key, value] of Object.entries(attrs)) {
-      if (key === 'className') {
-        element.className = value
-      } else {
-        element.setAttribute(key, value)
-      }
-    }
-  }
-  if (children) {
-    for (const child of children) {
-      if (typeof child === 'string') {
-        element.appendChild(document.createTextNode(child))
-      } else {
-        element.appendChild(child)
-      }
-    }
-  }
-  return element
-}
-
 function sanitize(raw: string, config: SanitizerConfig): {
   output: string | null
+  parsed: Record<string, unknown> | null
   error: string | null
   stats: { redactedEnvVars: number; redactedEmails: number; anonymizedPaths: number }
   advisories: readonly Advisory[]
@@ -47,30 +25,30 @@ function sanitize(raw: string, config: SanitizerConfig): {
 
   const extracted = extractYaml(raw)
   if (extracted.error !== null || extracted.yaml === null) {
-    return { output: null, error: extracted.error, stats: emptyStats, advisories: [] }
+    return { output: null, parsed: null, error: extracted.error, stats: emptyStats, advisories: [] }
   }
 
   const compiled = compileConfig(config)
   const result = redactCompose(extracted.yaml, compiled)
   if (result.error !== null) {
-    return { output: null, error: result.error, stats: emptyStats, advisories: [] }
+    return { output: null, parsed: null, error: result.error, stats: emptyStats, advisories: [] }
   }
 
   let parsed: unknown
   try {
     parsed = load(result.output)
   } catch {
-    return { output: result.output, error: null, stats: result.stats, advisories: [] }
+    return { output: result.output, parsed: null, error: null, stats: result.stats, advisories: [] }
   }
 
   if (isRecord(parsed)) {
     const stripped = stripNoise(parsed)
     const advisories = detectAdvisories(stripped)
     const finalOutput = dump(stripped, { lineWidth: -1, noRefs: true, quotingType: "'", forceQuotes: false })
-    return { output: finalOutput, error: null, stats: result.stats, advisories }
+    return { output: finalOutput, parsed: stripped, error: null, stats: result.stats, advisories }
   }
 
-  return { output: result.output, error: null, stats: result.stats, advisories: [] }
+  return { output: result.output, parsed: null, error: null, stats: result.stats, advisories: [] }
 }
 
 function renderAdvisories(advisories: readonly Advisory[]): HTMLElement {
@@ -169,7 +147,7 @@ function init(): void {
   // Header
   const header = el('header')
   const h1 = el('h1')
-  h1.textContent = 'Docker Compose Sanitizer'
+  h1.textContent = 'Compose Debugger'
   header.appendChild(h1)
   app.appendChild(header)
 
@@ -211,7 +189,17 @@ function init(): void {
   piiWarning.classList.add('hidden')
   app.appendChild(piiWarning)
 
-  // Output
+  // Tab bar (hidden until output)
+  const tabBar = el('div', { className: 'tab-bar hidden' })
+  const yamlTab = el('button', { className: 'tab-btn active' })
+  yamlTab.textContent = 'YAML'
+  tabBar.appendChild(yamlTab)
+  const cardsTab = el('button', { className: 'tab-btn' })
+  cardsTab.textContent = 'Cards'
+  tabBar.appendChild(cardsTab)
+  app.appendChild(tabBar)
+
+  // Output textarea (YAML view)
   const output = el('textarea', {
     id: 'output',
     className: 'code-textarea hidden',
@@ -220,6 +208,27 @@ function init(): void {
     spellcheck: 'false',
   })
   app.appendChild(output)
+
+  // Cards container (hidden by default)
+  const cardsContainer = el('div', { id: 'cards', className: 'cards-container hidden' })
+  app.appendChild(cardsContainer)
+
+  // Track current parsed object for markdown generation
+  let currentParsed: Record<string, unknown> | null = null
+
+  // Tab switching
+  yamlTab.addEventListener('click', () => {
+    yamlTab.classList.add('active')
+    cardsTab.classList.remove('active')
+    output.classList.remove('hidden')
+    cardsContainer.classList.add('hidden')
+  })
+  cardsTab.addEventListener('click', () => {
+    cardsTab.classList.add('active')
+    yamlTab.classList.remove('active')
+    cardsContainer.classList.remove('hidden')
+    output.classList.add('hidden')
+  })
 
   // Action buttons
   const actions = el('div', { id: 'actions', className: 'actions hidden' })
@@ -232,6 +241,22 @@ function init(): void {
     setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard' }, 1500)
   })
   actions.appendChild(copyBtn)
+
+  const mdBtn = el('button', { className: 'btn btn-secondary' })
+  mdBtn.textContent = 'Copy as Markdown Table'
+  mdBtn.addEventListener('click', async () => {
+    if (currentParsed) {
+      const services = parseServices(currentParsed)
+      const md = generateMarkdownTable(services)
+      const ok = await copyToClipboard(md || output.value)
+      mdBtn.textContent = ok ? 'Copied!' : 'Copy failed'
+    } else {
+      const ok = await copyToClipboard(output.value)
+      mdBtn.textContent = ok ? 'Copied!' : 'Copy failed'
+    }
+    setTimeout(() => { mdBtn.textContent = 'Copy as Markdown Table' }, 1500)
+  })
+  actions.appendChild(mdBtn)
 
   const pbBtn = el('button', { className: 'btn btn-secondary' })
   pbBtn.textContent = 'Open PrivateBin'
@@ -272,25 +297,28 @@ function init(): void {
   // Sanitize handler
   sanitizeBtn.addEventListener('click', () => {
     const raw = input.value
-    if (!raw.trim()) {
-      errorDiv.textContent = 'Please paste some Docker Compose YAML first.'
-      errorDiv.classList.remove('hidden')
+    const hideOutput = () => {
       output.classList.add('hidden')
+      cardsContainer.classList.add('hidden')
+      tabBar.classList.add('hidden')
       piiWarning.classList.add('hidden')
       actions.classList.add('hidden')
       statsDiv.classList.add('hidden')
       advisoriesDiv.replaceChildren()
+      currentParsed = null
+    }
+
+    if (!raw.trim()) {
+      errorDiv.textContent = 'Please paste some Docker Compose YAML first.'
+      errorDiv.classList.remove('hidden')
+      hideOutput()
       return
     }
 
     if (new Blob([raw]).size > MAX_INPUT_BYTES) {
       errorDiv.textContent = 'Input too large. Maximum 512 KB.'
       errorDiv.classList.remove('hidden')
-      output.classList.add('hidden')
-      piiWarning.classList.add('hidden')
-      actions.classList.add('hidden')
-      statsDiv.classList.add('hidden')
-      advisoriesDiv.replaceChildren()
+      hideOutput()
       return
     }
 
@@ -303,15 +331,32 @@ function init(): void {
       if (result.error !== null) {
         errorDiv.textContent = result.error
         errorDiv.classList.remove('hidden')
-        output.classList.add('hidden')
-        piiWarning.classList.add('hidden')
-        actions.classList.add('hidden')
-        statsDiv.classList.add('hidden')
-        advisoriesDiv.replaceChildren()
+        hideOutput()
       } else {
         errorDiv.classList.add('hidden')
         output.value = result.output ?? ''
+        currentParsed = result.parsed
+
+        // Reset to YAML tab
+        yamlTab.classList.add('active')
+        cardsTab.classList.remove('active')
         output.classList.remove('hidden')
+        cardsContainer.classList.add('hidden')
+
+        // Render cards
+        cardsContainer.replaceChildren()
+        if (result.parsed) {
+          const services = parseServices(result.parsed)
+          if (services.length > 0) {
+            const cards = renderCards(services)
+            // Move children from renderCards container into our persistent container
+            while (cards.firstChild) {
+              cardsContainer.appendChild(cards.firstChild)
+            }
+          }
+        }
+
+        tabBar.classList.remove('hidden')
         piiWarning.classList.remove('hidden')
         actions.classList.remove('hidden')
         statsDiv.textContent = renderStats(result.stats)

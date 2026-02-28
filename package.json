@@ -1,7 +1,7 @@
 {
   "name": "compose-sanitizer",
   "version": "0.1.0",
-  "description": "Browser-based Docker Compose sanitizer — redacts secrets, keeps debugging info",
+  "description": "Browser-based Docker Compose debugger — redacts secrets, shows service cards, and generates markdown tables for support channels",
   "type": "module",
   "scripts": {
     "dev": "vite",

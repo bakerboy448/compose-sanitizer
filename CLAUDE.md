@@ -1,4 +1,4 @@
-# Compose Sanitizer
+# Compose Debugger
 
 ## Build
 npm install && npm run build

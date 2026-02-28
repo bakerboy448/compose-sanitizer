@@ -1,16 +1,24 @@
-# Docker Compose Sanitizer
+# Compose Debugger
 
-Browser-based tool that redacts sensitive values from Docker Compose YAML while preserving debugging-relevant structure. Paste output from `docker-autocompose`, `docker compose config`, or raw `docker-compose.yml` and get back a version safe to share in support channels.
+Browser-based tool for parsing Docker Compose output into structured debugging views. Paste output from `docker-autocompose`, `docker compose config`, or raw `docker-compose.yml` — get sanitized YAML, per-service cards, and a markdown table ready for Discord or GitHub support channels.
 
 **Live:** [bakerboy448.github.io/compose-sanitizer](https://bakerboy448.github.io/compose-sanitizer/)
 
 ## Features
 
+### Service Cards
+
+Parsed per-service view showing image, ports, volumes, networks, environment, and extras (restart policy, hostname, depends_on, resource limits). Empty sections are omitted. Switch between YAML and Cards views with the tab bar.
+
+### Markdown Table
+
+One-click "Copy as Markdown Table" generates a table with columns for Service, Image, Ports, Volumes, and Networks — paste directly into Discord or GitHub issues.
+
 ### Redaction
 
 | What | Example | Result |
 |------|---------|--------|
-| Sensitive env values | `MYSQL_PASSWORD: supersecret` | `MYSQL_PASSWORD: **REDACTED**` |
+| Sensitive env values | `RADARR__POSTGRES__HOST: db.example.com` | `RADARR__POSTGRES__HOST: **REDACTED**` |
 | Email addresses | `NOTIFY: user@example.com` | `NOTIFY: **REDACTED**` |
 | Home directory paths | `/home/john/media:/tv` | `~/media:/tv` |
 
@@ -26,7 +34,7 @@ Removes auto-generated fields that clutter compose output:
 - S6-overlay env vars (`S6_*`)
 - Default runtime values (`ipc: private`, `entrypoint: /init`)
 - Locale/path env vars (`PATH`, `LANG`, `XDG_*`)
-- Empty maps and arrays
+- Empty env values and empty maps/arrays
 
 ### Advisories
 
@@ -44,7 +52,7 @@ Accepts multiple input formats:
 
 ### Customizable Patterns
 
-The Settings panel allows custom sensitive patterns (regex) and safe key lists. Configuration persists in `localStorage`.
+The Advanced Settings panel allows custom sensitive patterns (regex) and safe key lists. Configuration persists in `localStorage`.
 
 ## Self-Hosting
 
@@ -65,20 +73,22 @@ Single-page app built with Vite + vanilla TypeScript. The build produces one sel
 
 ```
 src/
-  patterns.ts     # Shared type guards, regex patterns, utility functions
+  dom.ts          # Shared el() DOM helper (no innerHTML)
+  patterns.ts     # Type guards, regex patterns, utility functions
   extract.ts      # Extracts YAML from mixed console output
   redact.ts       # Redacts sensitive values, anonymizes paths
   noise.ts        # Strips auto-generated noise fields
   advisories.ts   # Detects misconfigurations (hardlinks, etc.)
+  services.ts     # Parses compose object into ServiceInfo[]
+  markdown.ts     # Generates markdown table from ServiceInfo[]
+  cards.ts        # Renders per-service card DOM
   config.ts       # Customizable patterns, localStorage persistence
   clipboard.ts    # Copy, PrivateBin, and Gist sharing
   disclaimer.ts   # PII warnings and legal disclaimers
-  main.ts         # UI assembly and event wiring
+  main.ts         # UI assembly, tabs, and event wiring
 ```
 
 ### Testing
-
-104 tests across 7 test files with >93% statement coverage:
 
 ```bash
 npm test                       # Run tests
