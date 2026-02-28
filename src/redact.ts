@@ -1,5 +1,5 @@
 import { load, dump } from 'js-yaml'
-import { isSensitiveKey, containsEmail, anonymizeHomePath } from './patterns'
+import { isRecord, isSensitiveKey, containsEmail, anonymizeHomePath } from './patterns'
 
 const REDACTED = '**REDACTED**'
 
@@ -13,10 +13,6 @@ export interface RedactResult {
   readonly output: string
   readonly error: string | null
   readonly stats: RedactStats
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 export interface PatternConfig {

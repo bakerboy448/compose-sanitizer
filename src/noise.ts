@@ -1,3 +1,5 @@
+import { isRecord } from './patterns'
+
 const COMPOSE_LABEL_PREFIX = 'com.docker.compose.'
 
 const NOISE_ENV_PATTERNS: readonly RegExp[] = [
@@ -20,10 +22,6 @@ const DEFAULT_SERVICE_FIELDS: ReadonlyMap<string, unknown> = new Map([
 ])
 
 const DEFAULT_ENTRYPOINTS = new Set(['/init'])
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function isEmpty(value: unknown): boolean {
   if (value == null) return true
