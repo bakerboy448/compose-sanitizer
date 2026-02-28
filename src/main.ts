@@ -199,7 +199,7 @@ function init(): void {
   cardsTab.textContent = 'Cards'
   tabBar.appendChild(cardsTab)
   const volumesTab = el('button', { className: 'tab-btn' })
-  volumesTab.textContent = 'Volumes'
+  volumesTab.textContent = 'Table'
   tabBar.appendChild(volumesTab)
   app.appendChild(tabBar)
 
@@ -260,35 +260,29 @@ function init(): void {
   actions.appendChild(copyBtn)
 
   const mdBtn = el('button', { className: 'btn btn-secondary' })
-  mdBtn.textContent = 'Copy as Markdown Table'
+  mdBtn.textContent = 'Copy as Markdown'
   mdBtn.addEventListener('click', async () => {
-    if (currentParsed) {
-      const services = parseServices(currentParsed)
-      const md = generateMarkdownTable(services)
-      const ok = await copyToClipboard(md || output.value)
-      mdBtn.textContent = ok ? 'Copied!' : 'Copy failed'
-    } else {
-      const ok = await copyToClipboard(output.value)
-      mdBtn.textContent = ok ? 'Copied!' : 'Copy failed'
+    if (!currentParsed) {
+      mdBtn.textContent = 'No data'
+      setTimeout(() => { mdBtn.textContent = 'Copy as Markdown' }, 1500)
+      return
     }
-    setTimeout(() => { mdBtn.textContent = 'Copy as Markdown Table' }, 1500)
+    const services = parseServices(currentParsed)
+    const parts: string[] = []
+    const serviceTable = generateMarkdownTable(services)
+    if (serviceTable) {
+      parts.push('### Services\n\n' + serviceTable)
+    }
+    const volTable = generateVolumeComparisonMarkdown(services)
+    if (volTable) {
+      parts.push('### Volume Comparison\n\n' + volTable)
+    }
+    const md = parts.join('\n\n')
+    const ok = await copyToClipboard(md || 'No services found')
+    mdBtn.textContent = ok ? 'Copied!' : 'Copy failed'
+    setTimeout(() => { mdBtn.textContent = 'Copy as Markdown' }, 1500)
   })
   actions.appendChild(mdBtn)
-
-  const volMdBtn = el('button', { className: 'btn btn-secondary' })
-  volMdBtn.textContent = 'Copy Volume Table'
-  volMdBtn.addEventListener('click', async () => {
-    if (currentParsed) {
-      const services = parseServices(currentParsed)
-      const md = generateVolumeComparisonMarkdown(services)
-      const ok = await copyToClipboard(md || 'No volumes found')
-      volMdBtn.textContent = ok ? 'Copied!' : 'Copy failed'
-    } else {
-      volMdBtn.textContent = 'No data'
-    }
-    setTimeout(() => { volMdBtn.textContent = 'Copy Volume Table' }, 1500)
-  })
-  actions.appendChild(volMdBtn)
 
   const pbBtn = el('button', { className: 'btn btn-secondary' })
   pbBtn.textContent = 'Open PrivateBin'
@@ -387,6 +381,23 @@ function init(): void {
             // Render volume comparison table
             const volTable = renderVolumeTable(services)
             volumesContainer.appendChild(volTable)
+
+            // Markdown preview textarea
+            const volMd = generateVolumeComparisonMarkdown(services)
+            if (volMd) {
+              const mdLabel = el('label')
+              mdLabel.textContent = 'Markdown (for pasting into Discord / GitHub):'
+              mdLabel.style.marginTop = '0.75rem'
+              volumesContainer.appendChild(mdLabel)
+              const mdPreview = el('textarea', {
+                className: 'code-textarea',
+                rows: String(Math.min(volMd.split('\n').length + 1, 12)),
+                readonly: 'true',
+                spellcheck: 'false',
+              })
+              mdPreview.value = volMd
+              volumesContainer.appendChild(mdPreview)
+            }
           }
         }
 
