@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; base-uri 'none'">
-  <title>Docker Compose Sanitizer</title>
+  <title>Compose Debugger</title>
   <style>
     :root {
       --bg: #1a1a2e;
@@ -272,6 +272,83 @@
     }
 
     .footer a { color: var(--text); }
+
+    /* Tab bar */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      margin: 0.75rem 0 0;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .tab-btn {
+      padding: 0.5rem 1.2rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .tab-btn:hover { color: var(--text); }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* Cards */
+    .cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 0.75rem;
+      max-height: 600px;
+      overflow-y: auto;
+      padding: 0.5rem 0;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem;
+    }
+
+    .card-header {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--primary);
+    }
+
+    .card-section {
+      margin-top: 0.4rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: baseline;
+    }
+
+    .card-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 100px;
+      flex-shrink: 0;
+    }
+
+    .card-value {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: var(--text);
+    }
 
     .hidden { display: none !important; }
   </style>
