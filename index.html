@@ -350,6 +350,123 @@
       color: var(--text);
     }
 
+    /* Volume mini-table in cards */
+    .vol-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto;
+      gap: 0.15rem 0.5rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--text);
+    }
+
+    .vol-source {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .vol-arrow {
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    .vol-target {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .vol-mode {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    /* Cross-service volume comparison table */
+    .volume-table-wrap {
+      overflow-x: auto;
+      max-height: 600px;
+      overflow-y: auto;
+      padding: 0.5rem 0;
+    }
+
+    .volume-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+    }
+
+    .volume-table th,
+    .volume-table td {
+      padding: 0.35rem 0.6rem;
+      border: 1px solid var(--border);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .volume-table th {
+      background: var(--surface);
+      color: var(--primary);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .volume-table td {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .volume-table td.vol-empty {
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 640px) {
+      #app {
+        padding: 1rem 0.75rem;
+      }
+
+      .code-textarea {
+        font-size: 0.78rem;
+      }
+
+      .cards-container {
+        grid-template-columns: 1fr;
+      }
+
+      .card-section {
+        flex-direction: column;
+        gap: 0.2rem;
+      }
+
+      .card-label {
+        min-width: unset;
+      }
+
+      .tab-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+      }
+
+      .volume-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .actions .btn {
+        width: 100%;
+        text-align: center;
+      }
+    }
+
     .hidden { display: none !important; }
   </style>
 </head>

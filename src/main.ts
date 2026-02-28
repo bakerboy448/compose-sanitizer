@@ -9,8 +9,9 @@ import { copyToClipboard, openPrivateBin, openGist } from './clipboard'
 import { createShortNotice, createPiiWarning, createFullDisclaimer } from './disclaimer'
 import { el } from './dom'
 import { parseServices } from './services'
-import { generateMarkdownTable } from './markdown'
+import { generateMarkdownTable, generateVolumeComparisonMarkdown } from './markdown'
 import { renderCards } from './cards'
+import { renderVolumeTable } from './volume-table'
 
 const MAX_INPUT_BYTES = 512 * 1024
 
@@ -197,6 +198,9 @@ function init(): void {
   const cardsTab = el('button', { className: 'tab-btn' })
   cardsTab.textContent = 'Cards'
   tabBar.appendChild(cardsTab)
+  const volumesTab = el('button', { className: 'tab-btn' })
+  volumesTab.textContent = 'Volumes'
+  tabBar.appendChild(volumesTab)
   app.appendChild(tabBar)
 
   // Output textarea (YAML view)
@@ -213,22 +217,35 @@ function init(): void {
   const cardsContainer = el('div', { id: 'cards', className: 'cards-container hidden' })
   app.appendChild(cardsContainer)
 
+  // Volumes container (hidden by default)
+  const volumesContainer = el('div', { id: 'volumes', className: 'hidden' })
+  app.appendChild(volumesContainer)
+
   // Track current parsed object for markdown generation
   let currentParsed: Record<string, unknown> | null = null
 
   // Tab switching
-  yamlTab.addEventListener('click', () => {
-    yamlTab.classList.add('active')
-    cardsTab.classList.remove('active')
-    output.classList.remove('hidden')
-    cardsContainer.classList.add('hidden')
-  })
-  cardsTab.addEventListener('click', () => {
-    cardsTab.classList.add('active')
-    yamlTab.classList.remove('active')
-    cardsContainer.classList.remove('hidden')
-    output.classList.add('hidden')
-  })
+  const tabs = [
+    { btn: yamlTab, panel: output },
+    { btn: cardsTab, panel: cardsContainer },
+    { btn: volumesTab, panel: volumesContainer },
+  ] as const
+
+  function switchTab(activeBtn: HTMLElement): void {
+    for (const tab of tabs) {
+      if (tab.btn === activeBtn) {
+        tab.btn.classList.add('active')
+        tab.panel.classList.remove('hidden')
+      } else {
+        tab.btn.classList.remove('active')
+        tab.panel.classList.add('hidden')
+      }
+    }
+  }
+
+  yamlTab.addEventListener('click', () => switchTab(yamlTab))
+  cardsTab.addEventListener('click', () => switchTab(cardsTab))
+  volumesTab.addEventListener('click', () => switchTab(volumesTab))
 
   // Action buttons
   const actions = el('div', { id: 'actions', className: 'actions hidden' })
@@ -257,6 +274,21 @@ function init(): void {
     setTimeout(() => { mdBtn.textContent = 'Copy as Markdown Table' }, 1500)
   })
   actions.appendChild(mdBtn)
+
+  const volMdBtn = el('button', { className: 'btn btn-secondary' })
+  volMdBtn.textContent = 'Copy Volume Table'
+  volMdBtn.addEventListener('click', async () => {
+    if (currentParsed) {
+      const services = parseServices(currentParsed)
+      const md = generateVolumeComparisonMarkdown(services)
+      const ok = await copyToClipboard(md || 'No volumes found')
+      volMdBtn.textContent = ok ? 'Copied!' : 'Copy failed'
+    } else {
+      volMdBtn.textContent = 'No data'
+    }
+    setTimeout(() => { volMdBtn.textContent = 'Copy Volume Table' }, 1500)
+  })
+  actions.appendChild(volMdBtn)
 
   const pbBtn = el('button', { className: 'btn btn-secondary' })
   pbBtn.textContent = 'Open PrivateBin'
@@ -300,6 +332,7 @@ function init(): void {
     const hideOutput = () => {
       output.classList.add('hidden')
       cardsContainer.classList.add('hidden')
+      volumesContainer.classList.add('hidden')
       tabBar.classList.add('hidden')
       piiWarning.classList.add('hidden')
       actions.classList.add('hidden')
@@ -338,13 +371,11 @@ function init(): void {
         currentParsed = result.parsed
 
         // Reset to YAML tab
-        yamlTab.classList.add('active')
-        cardsTab.classList.remove('active')
-        output.classList.remove('hidden')
-        cardsContainer.classList.add('hidden')
+        switchTab(yamlTab)
 
-        // Render cards
+        // Render cards + volume table
         cardsContainer.replaceChildren()
+        volumesContainer.replaceChildren()
         if (result.parsed) {
           const services = parseServices(result.parsed)
           if (services.length > 0) {
@@ -353,6 +384,9 @@ function init(): void {
             while (cards.firstChild) {
               cardsContainer.appendChild(cards.firstChild)
             }
+            // Render volume comparison table
+            const volTable = renderVolumeTable(services)
+            volumesContainer.appendChild(volTable)
           }
         }
 
