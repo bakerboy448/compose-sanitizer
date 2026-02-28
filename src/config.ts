@@ -42,8 +42,16 @@ export function compileConfig(config: SanitizerConfig): {
   readonly sensitivePatterns: readonly RegExp[]
   readonly safeKeys: ReadonlySet<string>
 } {
+  const compiled: RegExp[] = []
+  for (const p of config.sensitivePatterns) {
+    try {
+      compiled.push(new RegExp(p, 'i'))
+    } catch {
+      // Skip invalid regex patterns — user entered bad syntax in settings
+    }
+  }
   return {
-    sensitivePatterns: config.sensitivePatterns.map(p => new RegExp(p, 'i')),
+    sensitivePatterns: compiled,
     safeKeys: new Set(config.safeKeys),
   }
 }
