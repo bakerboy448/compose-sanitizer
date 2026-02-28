@@ -1,4 +1,5 @@
 import { load } from 'js-yaml'
+import { isRecord } from './patterns'
 
 export interface ExtractResult {
   readonly yaml: string | null
@@ -10,10 +11,6 @@ const YAML_START_KEYS = /^(version|services|name|networks|volumes|x-)[\s:]/
 const SHELL_PREFIX = /^[$#>]\s|^(sudo\s|docker\s|podman\s)/
 
 const TERMINAL_PROMPT = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+[:\s~$#]/
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function findYamlStart(lines: readonly string[]): number {
   for (let i = 0; i < lines.length; i++) {
