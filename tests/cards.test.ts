@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { renderCards } from '../src/cards'
+import { renderCards, parseVolume } from '../src/cards'
 import type { ServiceInfo } from '../src/services'
 
 function makeService(overrides: Partial<ServiceInfo> & { name: string }): ServiceInfo {
@@ -107,5 +107,77 @@ describe('renderCards', () => {
     expect(html).toContain('&lt;img')
     expect(container.querySelectorAll('script')).toHaveLength(0)
     expect(container.querySelectorAll('img')).toHaveLength(0)
+  })
+
+  it('renders volumes as structured grid with arrow separator', () => {
+    const services = [makeService({
+      name: 'app',
+      image: 'nginx',
+      volumes: ['/config:/config', '/mnt/data/media:/data:ro'],
+    })]
+    const container = renderCards(services)
+    const grid = container.querySelector('.vol-grid')
+    expect(grid).not.toBeNull()
+    // Each volume produces 4 grid cells: source, arrow, target, mode
+    expect(grid!.children).toHaveLength(8)
+
+    // First volume: /config → /config (no mode)
+    expect(grid!.children[0]!.textContent).toBe('/config')
+    expect(grid!.children[1]!.textContent).toBe('\u2192')
+    expect(grid!.children[2]!.textContent).toBe('/config')
+    expect(grid!.children[3]!.textContent).toBe('')
+
+    // Second volume: /mnt/data/media → /data ro
+    expect(grid!.children[4]!.textContent).toBe('/mnt/data/media')
+    expect(grid!.children[5]!.textContent).toBe('\u2192')
+    expect(grid!.children[6]!.textContent).toBe('/data')
+    expect(grid!.children[7]!.textContent).toBe('ro')
+  })
+
+  it('renders Volumes label alongside vol-grid', () => {
+    const services = [makeService({ name: 'app', image: 'nginx', volumes: ['/a:/b'] })]
+    const container = renderCards(services)
+    const labels = container.querySelectorAll('.card-label')
+    const volLabel = Array.from(labels).find(l => l.textContent === 'Volumes')
+    expect(volLabel).toBeDefined()
+    expect(volLabel!.nextElementSibling!.className).toBe('vol-grid')
+  })
+})
+
+describe('parseVolume', () => {
+  it('parses source:target', () => {
+    expect(parseVolume('/config:/config')).toEqual({ source: '/config', target: '/config', mode: '' })
+  })
+
+  it('parses source:target:mode', () => {
+    expect(parseVolume('/data:/data:ro')).toEqual({ source: '/data', target: '/data', mode: 'ro' })
+  })
+
+  it('parses rw mode', () => {
+    expect(parseVolume('/data:/data:rw')).toEqual({ source: '/data', target: '/data', mode: 'rw' })
+  })
+
+  it('handles volume with no colon as source-only', () => {
+    expect(parseVolume('myvolume')).toEqual({ source: 'myvolume', target: '', mode: '' })
+  })
+
+  it('handles named volume:target', () => {
+    expect(parseVolume('pgdata:/var/lib/postgresql')).toEqual({
+      source: 'pgdata',
+      target: '/var/lib/postgresql',
+      mode: '',
+    })
+  })
+
+  it('parses compound comma-separated modes', () => {
+    expect(parseVolume('/data:/data:ro,z')).toEqual({ source: '/data', target: '/data', mode: 'ro,z' })
+  })
+
+  it('parses nocopy mode', () => {
+    expect(parseVolume('/data:/data:nocopy')).toEqual({ source: '/data', target: '/data', mode: 'nocopy' })
+  })
+
+  it('handles empty string', () => {
+    expect(parseVolume('')).toEqual({ source: '', target: '', mode: '' })
   })
 })

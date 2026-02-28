@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateMarkdownTable } from '../src/markdown'
+import { generateMarkdownTable, generateVolumeComparisonMarkdown } from '../src/markdown'
 import type { ServiceInfo } from '../src/services'
 
 function makeService(overrides: Partial<ServiceInfo> & { name: string }): ServiceInfo {
@@ -97,5 +97,58 @@ describe('generateMarkdownTable', () => {
     const result = generateMarkdownTable(services)
     expect(result).not.toContain('\n\n') // no double newlines in data
     expect(result).toContain('nginx latest') // newline replaced with space
+  })
+})
+
+describe('generateVolumeComparisonMarkdown', () => {
+  it('returns empty string for no services', () => {
+    expect(generateVolumeComparisonMarkdown([])).toBe('')
+  })
+
+  it('returns empty string for services with no volumes', () => {
+    const services = [makeService({ name: 'app', image: 'nginx' })]
+    expect(generateVolumeComparisonMarkdown(services)).toBe('')
+  })
+
+  it('produces a markdown table with host paths as rows', () => {
+    const services = [
+      makeService({ name: 'plex', image: 'plex', volumes: ['/config:/config', '/mnt/data:/data'] }),
+      makeService({ name: 'radarr', image: 'radarr', volumes: ['/config:/config'] }),
+    ]
+    const result = generateVolumeComparisonMarkdown(services)
+    const lines = result.split('\n')
+    // Header
+    expect(lines[0]).toBe('| Host Path | plex | radarr |')
+    // Separator
+    expect(lines[1]).toBe('| --- | --- | --- |')
+    // Data rows sorted alphabetically
+    expect(lines[2]).toContain('/config')
+    expect(lines[2]).toContain('/config')
+    expect(lines[3]).toContain('/mnt/data')
+  })
+
+  it('shows em dash for missing mounts', () => {
+    const services = [
+      makeService({ name: 'a', image: 'img', volumes: ['/x:/x'] }),
+      makeService({ name: 'b', image: 'img', volumes: ['/y:/y'] }),
+    ]
+    const result = generateVolumeComparisonMarkdown(services)
+    expect(result).toContain('\u2014')
+  })
+
+  it('includes mode annotation in cells', () => {
+    const services = [
+      makeService({ name: 'app', image: 'img', volumes: ['/data:/data:ro'] }),
+    ]
+    const result = generateVolumeComparisonMarkdown(services)
+    expect(result).toContain('/data (ro)')
+  })
+
+  it('escapes pipe characters in paths', () => {
+    const services = [
+      makeService({ name: 'app', image: 'img', volumes: ['/a|b:/c'] }),
+    ]
+    const result = generateVolumeComparisonMarkdown(services)
+    expect(result).toContain('/a\\|b')
   })
 })
