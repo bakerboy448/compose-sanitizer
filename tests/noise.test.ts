@@ -156,4 +156,123 @@ describe('stripNoise', () => {
     const result = stripNoise(input)
     expect(result).not.toHaveProperty('name')
   })
+
+  it('removes default Docker fields from autocompose output', () => {
+    const input = {
+      services: {
+        app: {
+          image: 'nginx',
+          ipc: 'private',
+          working_dir: '/',
+          entrypoint: ['/init'],
+          hostname: 'myhost',
+        },
+      },
+    }
+    const result = stripNoise(input)
+    const app = (result['services'] as Record<string, Record<string, unknown>>)['app']
+    expect(app).not.toHaveProperty('ipc')
+    expect(app).not.toHaveProperty('working_dir')
+    expect(app).not.toHaveProperty('entrypoint')
+    expect(app).toHaveProperty('hostname', 'myhost')
+  })
+
+  it('keeps non-default entrypoint', () => {
+    const input = {
+      services: {
+        app: {
+          image: 'nginx',
+          entrypoint: ['/custom-entrypoint.sh'],
+        },
+      },
+    }
+    const result = stripNoise(input)
+    const app = (result['services'] as Record<string, Record<string, unknown>>)['app']
+    expect(app).toHaveProperty('entrypoint')
+  })
+
+  it('strips container-internal env vars from image defaults (dict style)', () => {
+    const input = {
+      services: {
+        app: {
+          image: 'linuxserver/sonarr',
+          environment: {
+            S6_BEHAVIOUR_IF_STAGE2_FAILS: '2',
+            S6_CMD_WAIT_FOR_SERVICES_MAXTIME: '0',
+            IMAGE_STATS: 'base64data',
+            APP_DIR: '/app',
+            CONFIG_DIR: '/config',
+            XDG_CONFIG_HOME: '/config/.config',
+            XDG_CACHE_HOME: '/config/.cache',
+            XDG_DATA_HOME: '/config/.local/share',
+            PUID: '1000',
+            TZ: 'America/New_York',
+            API_KEY: 'secret123',
+          },
+        },
+      },
+    }
+    const result = stripNoise(input)
+    const env = (result['services'] as Record<string, Record<string, unknown>>)['app']?.['environment'] as Record<string, unknown>
+    expect(env).not.toHaveProperty('S6_BEHAVIOUR_IF_STAGE2_FAILS')
+    expect(env).not.toHaveProperty('S6_CMD_WAIT_FOR_SERVICES_MAXTIME')
+    expect(env).not.toHaveProperty('IMAGE_STATS')
+    expect(env).not.toHaveProperty('APP_DIR')
+    expect(env).not.toHaveProperty('CONFIG_DIR')
+    expect(env).not.toHaveProperty('XDG_CONFIG_HOME')
+    expect(env).not.toHaveProperty('XDG_CACHE_HOME')
+    expect(env).not.toHaveProperty('XDG_DATA_HOME')
+    expect(env).toHaveProperty('PUID', '1000')
+    expect(env).toHaveProperty('TZ', 'America/New_York')
+    expect(env).toHaveProperty('API_KEY', 'secret123')
+  })
+
+  it('strips container-internal env vars from image defaults (array style)', () => {
+    const input = {
+      services: {
+        app: {
+          image: 'linuxserver/sonarr',
+          environment: [
+            'S6_BEHAVIOUR_IF_STAGE2_FAILS=2',
+            'IMAGE_STATS=base64data',
+            'APP_DIR=/app',
+            'XDG_CONFIG_HOME=/config/.config',
+            'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+            'PUID=1000',
+            'TZ=America/New_York',
+          ],
+        },
+      },
+    }
+    const result = stripNoise(input)
+    const env = (result['services'] as Record<string, Record<string, unknown>>)['app']?.['environment'] as string[]
+    expect(env).not.toContain(expect.stringContaining('S6_BEHAVIOUR_IF_STAGE2_FAILS'))
+    expect(env).not.toContain(expect.stringContaining('IMAGE_STATS'))
+    expect(env).not.toContain(expect.stringContaining('APP_DIR'))
+    expect(env).not.toContain(expect.stringContaining('XDG_CONFIG_HOME'))
+    expect(env).not.toContain(expect.stringContaining('PATH='))
+    expect(env).toContain('PUID=1000')
+    expect(env).toContain('TZ=America/New_York')
+  })
+
+  it('strips empty env values in array style', () => {
+    const input = {
+      services: {
+        app: {
+          environment: [
+            'VPN_PIA_USER=',
+            'VPN_LAN_NETWORK=',
+            'UNBOUND_NAMESERVERS=',
+            'PUID=1000',
+          ],
+        },
+      },
+    }
+    const result = stripNoise(input)
+    const env = (result['services'] as Record<string, Record<string, unknown>>)['app']?.['environment'] as string[]
+    expect(env).not.toContain('VPN_PIA_USER=')
+    expect(env).not.toContain('VPN_LAN_NETWORK=')
+    expect(env).not.toContain('UNBOUND_NAMESERVERS=')
+    expect(env).toContain('PUID=1000')
+  })
 })
