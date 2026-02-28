@@ -1,11 +1,17 @@
 import { isRecord } from './patterns'
 
+export interface NetworkInfo {
+  readonly name: string
+  readonly aliases: readonly string[]
+  readonly ipv4Address: string
+}
+
 export interface ServiceInfo {
   readonly name: string
   readonly image: string
   readonly ports: readonly string[]
   readonly volumes: readonly string[]
-  readonly networks: readonly string[]
+  readonly networks: readonly NetworkInfo[]
   readonly environment: ReadonlyMap<string, string>
   readonly extras: ReadonlyMap<string, string>
 }
@@ -48,12 +54,24 @@ function normalizeVolumes(volumes: unknown): readonly string[] {
   return volumes.map(normalizeVolume)
 }
 
-function extractNetworks(networks: unknown): readonly string[] {
+function extractNetworks(networks: unknown): readonly NetworkInfo[] {
   if (Array.isArray(networks)) {
-    return [...networks].map(String).sort()
+    return [...networks]
+      .map(n => ({ name: String(n), aliases: [] as readonly string[], ipv4Address: '' }))
+      .sort((a, b) => a.name.localeCompare(b.name))
   }
   if (isRecord(networks)) {
-    return Object.keys(networks).sort()
+    return Object.entries(networks)
+      .map(([name, config]): NetworkInfo => {
+        const aliases = isRecord(config) && Array.isArray(config['aliases'])
+          ? config['aliases'].map(String)
+          : []
+        const ipv4Address = isRecord(config) && typeof config['ipv4_address'] === 'string'
+          ? config['ipv4_address']
+          : ''
+        return { name, aliases, ipv4Address }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
   }
   return []
 }

@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { renderCards, parseVolume } from '../src/cards'
-import type { ServiceInfo } from '../src/services'
+import type { ServiceInfo, NetworkInfo } from '../src/services'
+
+function net(name: string, opts?: { aliases?: string[]; ipv4Address?: string }): NetworkInfo {
+  return { name, aliases: opts?.aliases ?? [], ipv4Address: opts?.ipv4Address ?? '' }
+}
 
 function makeService(overrides: Partial<ServiceInfo> & { name: string }): ServiceInfo {
   return {
@@ -141,6 +145,65 @@ describe('renderCards', () => {
     const volLabel = Array.from(labels).find(l => l.textContent === 'Volumes')
     expect(volLabel).toBeDefined()
     expect(volLabel!.nextElementSibling!.className).toBe('vol-grid')
+  })
+
+  it('renders network names in card', () => {
+    const services = [makeService({
+      name: 'app',
+      image: 'nginx',
+      networks: [net('frontend'), net('backend')],
+    })]
+    const container = renderCards(services)
+    const labels = container.querySelectorAll('.card-label')
+    const netLabel = Array.from(labels).find(l => l.textContent === 'Networks')
+    expect(netLabel).toBeDefined()
+    const netSection = netLabel!.parentElement!
+    expect(netSection.textContent).toContain('frontend')
+    expect(netSection.textContent).toContain('backend')
+  })
+
+  it('renders network aliases in card', () => {
+    const services = [makeService({
+      name: 'plex',
+      image: 'plex',
+      networks: [net('media', { aliases: ['plex-media', 'media-server'] })],
+    })]
+    const container = renderCards(services)
+    const labels = container.querySelectorAll('.card-label')
+    const netLabel = Array.from(labels).find(l => l.textContent === 'Networks')
+    expect(netLabel).toBeDefined()
+    const netSection = netLabel!.parentElement!
+    expect(netSection.textContent).toContain('media')
+    expect(netSection.textContent).toContain('plex-media')
+    expect(netSection.textContent).toContain('media-server')
+  })
+
+  it('renders network ipv4 address in card', () => {
+    const services = [makeService({
+      name: 'app',
+      image: 'nginx',
+      networks: [net('backend', { ipv4Address: '172.20.0.10' })],
+    })]
+    const container = renderCards(services)
+    const labels = container.querySelectorAll('.card-label')
+    const netLabel = Array.from(labels).find(l => l.textContent === 'Networks')
+    const netSection = netLabel!.parentElement!
+    expect(netSection.textContent).toContain('172.20.0.10')
+  })
+
+  it('renders network with both aliases and ip', () => {
+    const services = [makeService({
+      name: 'app',
+      image: 'nginx',
+      networks: [net('media', { aliases: ['plex-alias'], ipv4Address: '172.20.0.5' })],
+    })]
+    const container = renderCards(services)
+    const labels = container.querySelectorAll('.card-label')
+    const netLabel = Array.from(labels).find(l => l.textContent === 'Networks')
+    const netSection = netLabel!.parentElement!
+    expect(netSection.textContent).toContain('media')
+    expect(netSection.textContent).toContain('plex-alias')
+    expect(netSection.textContent).toContain('172.20.0.5')
   })
 })
 

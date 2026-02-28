@@ -1,5 +1,5 @@
 import { el } from './dom'
-import type { ServiceInfo } from './services'
+import type { ServiceInfo, NetworkInfo } from './services'
 
 const VOLUME_MODES: ReadonlySet<string> = new Set([
   'ro', 'rw', 'z', 'Z', 'shared', 'slave', 'private', 'rshared', 'rslave', 'rprivate',
@@ -68,6 +68,25 @@ function renderVolumesSection(volumes: readonly string[]): HTMLElement {
   return section
 }
 
+function renderNetworksSection(networks: readonly NetworkInfo[]): HTMLElement {
+  const section = el('div', { className: 'card-section' })
+  const labelEl = el('div', { className: 'card-label' })
+  labelEl.textContent = 'Networks'
+  section.appendChild(labelEl)
+
+  const list = el('div', { className: 'card-value' })
+  for (const net of networks) {
+    const line = el('div')
+    const details: string[] = []
+    if (net.aliases.length > 0) details.push(`aliases: ${net.aliases.join(', ')}`)
+    if (net.ipv4Address) details.push(`ip: ${net.ipv4Address}`)
+    line.textContent = details.length > 0 ? `${net.name} (${details.join('; ')})` : net.name
+    list.appendChild(line)
+  }
+  section.appendChild(list)
+  return section
+}
+
 function renderListSection(label: string, items: readonly string[]): HTMLElement {
   const section = el('div', { className: 'card-section' })
   const labelEl = el('div', { className: 'card-label' })
@@ -123,7 +142,7 @@ function renderCard(service: ServiceInfo): HTMLElement {
   }
 
   if (service.networks.length > 0) {
-    card.appendChild(renderListSection('Networks', service.networks))
+    card.appendChild(renderNetworksSection(service.networks))
   }
 
   if (service.environment.size > 0) {
