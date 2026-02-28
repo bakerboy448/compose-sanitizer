@@ -1,3 +1,5 @@
+import { isRecord } from './patterns'
+
 export interface Advisory {
   readonly type: 'hardlinks'
   readonly message: string
@@ -8,10 +10,6 @@ export interface Advisory {
 const MEDIA_CONTAINER_PATHS = new Set([
   '/tv', '/movies', '/series', '/music', '/books', '/anime',
 ])
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 function getContainerPath(volumeStr: string): string {
   const parts = volumeStr.split(':')
