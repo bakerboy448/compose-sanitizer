@@ -1,0 +1,59 @@
+name: Pre-release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Get current version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Get next pre-release number
+        id: prerelease
+        env:
+          BASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          LATEST=$(git tag -l "v${BASE_VERSION}-pre.*" --sort=-version:refname | head -n1)
+          if [ -z "$LATEST" ]; then
+            NUM=1
+          else
+            NUM=$(echo "$LATEST" | sed "s/v${BASE_VERSION}-pre\.\([0-9]*\)/\1/")
+            NUM=$((NUM + 1))
+          fi
+          TAG="v${BASE_VERSION}-pre.${NUM}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - run: npm ci
+      - run: npm run build
+      - run: cp dist/index.html compose-sanitizer.html
+
+      - name: Create pre-release tag
+        env:
+          TAG: ${{ steps.prerelease.outputs.tag }}
+        run: |
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prerelease.outputs.tag }}
+          files: compose-sanitizer.html
+          generate_release_notes: true
+          prerelease: true

@@ -1,0 +1,69 @@
+name: Stable Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 0.2.0). Will be tagged as v0.2.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Validate version format
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Invalid version format. Use semver (e.g., 1.2.3)"
+            exit 1
+          fi
+
+      - name: Check tag does not exist
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag v${VERSION} already exists"
+            exit 1
+          fi
+
+      - name: Update package.json version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: npm version "$VERSION" --no-git-tag-version
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx vitest run --passWithNoTests
+      - run: npm run build
+      - run: cp dist/index.html compose-sanitizer.html
+
+      - name: Commit version bump and tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "chore: release v${VERSION}"
+          git tag "v${VERSION}"
+          git push origin main --follow-tags
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          files: compose-sanitizer.html
+          generate_release_notes: true
+          prerelease: false
