@@ -1,0 +1,39 @@
+name: Bug Report
+description: Report a bug in the sanitizer
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **This tracker is for bugs only.** For support questions, visit the relevant community channels (e.g., Discord, forums).
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should have happened?
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Input YAML (sanitized)
+      description: Paste a minimal example that reproduces the issue. Redact any real secrets first.
+      render: yaml
+  - type: textarea
+    id: output
+    attributes:
+      label: Actual output
+      description: What the sanitizer produced
+      render: yaml
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: e.g., Chrome 120, Firefox 121, Safari 17
