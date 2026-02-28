@@ -56,7 +56,7 @@ export function generateMarkdownTable(services: readonly ServiceInfo[]): string 
       escapeCell(svc.name),
       escapeCell(svc.image),
       escapeCell(joinField([...svc.ports])),
-      escapeCell(joinField([...svc.networks])),
+      escapeCell(joinField(svc.networks.map(n => n.name))),
     ]
     const extraCells = extraKeys.map(key => escapeCell(svc.extras.get(key) ?? ''))
     return `| ${[...baseCells, ...extraCells].join(' | ')} |`

@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { generateMarkdownTable, generateVolumeComparisonMarkdown } from '../src/markdown'
-import type { ServiceInfo } from '../src/services'
+import type { ServiceInfo, NetworkInfo } from '../src/services'
+
+function net(name: string, opts?: { aliases?: string[]; ipv4Address?: string }): NetworkInfo {
+  return { name, aliases: opts?.aliases ?? [], ipv4Address: opts?.ipv4Address ?? '' }
+}
 
 function makeService(overrides: Partial<ServiceInfo> & { name: string }): ServiceInfo {
   return {
@@ -26,7 +30,7 @@ describe('generateMarkdownTable', () => {
         image: 'linuxserver/sonarr:latest',
         ports: ['8989:8989'],
         volumes: ['/config:/config', '/data:/data'],
-        networks: ['default'],
+        networks: [net('default')],
       }),
     ]
     const result = generateMarkdownTable(services)
@@ -97,7 +101,7 @@ describe('generateMarkdownTable', () => {
         name: 'app',
         image: 'nginx',
         ports: ['80:80', '443:443'],
-        networks: ['frontend', 'backend'],
+        networks: [net('frontend'), net('backend')],
       }),
     ]
     const result = generateMarkdownTable(services)
@@ -113,6 +117,20 @@ describe('generateMarkdownTable', () => {
     const result = generateMarkdownTable(services)
     expect(result).not.toContain('\n\n') // no double newlines in data
     expect(result).toContain('nginx latest') // newline replaced with space
+  })
+
+  it('renders only network name, not aliases or ip', () => {
+    const services = [
+      makeService({
+        name: 'app',
+        image: 'nginx',
+        networks: [net('media', { aliases: ['plex-alias'], ipv4Address: '172.20.0.5' })],
+      }),
+    ]
+    const result = generateMarkdownTable(services)
+    expect(result).toContain('media')
+    expect(result).not.toContain('plex-alias')
+    expect(result).not.toContain('172.20.0.5')
   })
 })
 

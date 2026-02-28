@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { renderServiceTable, renderVolumeTable } from '../src/volume-table'
-import type { ServiceInfo } from '../src/services'
+import type { ServiceInfo, NetworkInfo } from '../src/services'
+
+function net(name: string, opts?: { aliases?: string[]; ipv4Address?: string }): NetworkInfo {
+  return { name, aliases: opts?.aliases ?? [], ipv4Address: opts?.ipv4Address ?? '' }
+}
 
 function makeService(overrides: Partial<ServiceInfo> & { name: string }): ServiceInfo {
   return {
@@ -22,7 +26,7 @@ describe('renderServiceTable', () => {
 
   it('renders base columns: Service, Image, Ports, Networks', () => {
     const services = [
-      makeService({ name: 'app', image: 'nginx:latest', ports: ['80:80'], networks: ['frontend'] }),
+      makeService({ name: 'app', image: 'nginx:latest', ports: ['80:80'], networks: [net('frontend')] }),
     ]
     const container = renderServiceTable(services)
     const ths = container.querySelectorAll('th')
@@ -34,7 +38,7 @@ describe('renderServiceTable', () => {
 
   it('renders service data in rows', () => {
     const services = [
-      makeService({ name: 'plex', image: 'plex:latest', ports: ['32400:32400'], networks: ['media'] }),
+      makeService({ name: 'plex', image: 'plex:latest', ports: ['32400:32400'], networks: [net('media')] }),
     ]
     const container = renderServiceTable(services)
     const tds = container.querySelectorAll('tbody td')
@@ -75,6 +79,20 @@ describe('renderServiceTable', () => {
     const dbCells = rows[1]!.querySelectorAll('td')
     expect(dbCells[restartIdx]!.textContent).toBe('always')
     expect(dbCells[hostnameIdx]!.textContent).toBe('pg-host')
+  })
+
+  it('renders only network name, not aliases or ip', () => {
+    const services = [
+      makeService({
+        name: 'app',
+        image: 'nginx',
+        networks: [net('media', { aliases: ['plex-alias'], ipv4Address: '172.20.0.5' })],
+      }),
+    ]
+    const container = renderServiceTable(services)
+    const tds = container.querySelectorAll('tbody td')
+    // Networks column is index 3 (Service, Image, Ports, Networks)
+    expect(tds[3]!.textContent).toBe('media')
   })
 })
 

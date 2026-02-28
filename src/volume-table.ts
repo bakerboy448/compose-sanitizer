@@ -57,7 +57,8 @@ export function renderServiceTable(services: readonly ServiceInfo[]): HTMLElemen
     row.appendChild(portsTd)
 
     const netTd = el('td')
-    netTd.textContent = svc.networks.length > 0 ? [...svc.networks].join(', ') : '\u2014'
+    const netNames = svc.networks.map(n => n.name)
+    netTd.textContent = netNames.length > 0 ? netNames.join(', ') : '\u2014'
     if (svc.networks.length === 0) netTd.className = 'vol-empty'
     row.appendChild(netTd)
 

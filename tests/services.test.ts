@@ -149,7 +149,7 @@ describe('parseServices', () => {
 
   // Network extraction
   describe('network extraction', () => {
-    it('extracts networks from dict form', () => {
+    it('extracts networks from dict form with NetworkInfo', () => {
       const compose = {
         services: {
           app: {
@@ -159,7 +159,68 @@ describe('parseServices', () => {
         },
       }
       const result = parseServices(compose)
-      expect(result[0].networks).toEqual(['backend', 'frontend'])
+      expect(result[0].networks).toEqual([
+        { name: 'backend', aliases: [], ipv4Address: '' },
+        { name: 'frontend', aliases: [], ipv4Address: '' },
+      ])
+    })
+
+    it('extracts aliases from dict form', () => {
+      const compose = {
+        services: {
+          app: {
+            image: 'nginx',
+            networks: {
+              media: {
+                aliases: ['plex-media', 'media-server'],
+              },
+            },
+          },
+        },
+      }
+      const result = parseServices(compose)
+      expect(result[0].networks).toEqual([
+        { name: 'media', aliases: ['plex-media', 'media-server'], ipv4Address: '' },
+      ])
+    })
+
+    it('extracts ipv4_address from dict form', () => {
+      const compose = {
+        services: {
+          app: {
+            image: 'nginx',
+            networks: {
+              backend: {
+                ipv4_address: '172.20.0.10',
+              },
+            },
+          },
+        },
+      }
+      const result = parseServices(compose)
+      expect(result[0].networks).toEqual([
+        { name: 'backend', aliases: [], ipv4Address: '172.20.0.10' },
+      ])
+    })
+
+    it('extracts both aliases and ipv4_address', () => {
+      const compose = {
+        services: {
+          app: {
+            image: 'nginx',
+            networks: {
+              media: {
+                aliases: ['plex-alias'],
+                ipv4_address: '172.20.0.5',
+              },
+            },
+          },
+        },
+      }
+      const result = parseServices(compose)
+      expect(result[0].networks).toEqual([
+        { name: 'media', aliases: ['plex-alias'], ipv4Address: '172.20.0.5' },
+      ])
     })
 
     it('extracts networks from array form', () => {
@@ -172,7 +233,10 @@ describe('parseServices', () => {
         },
       }
       const result = parseServices(compose)
-      expect(result[0].networks).toEqual(['backend', 'frontend'])
+      expect(result[0].networks).toEqual([
+        { name: 'backend', aliases: [], ipv4Address: '' },
+        { name: 'frontend', aliases: [], ipv4Address: '' },
+      ])
     })
 
     it('returns empty array when no networks', () => {
