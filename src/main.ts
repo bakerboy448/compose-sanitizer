@@ -110,7 +110,7 @@ function renderStats(stats: { redactedEnvVars: number; redactedEmails: number; a
 function buildSettingsPanel(config: SanitizerConfig, onSave: (c: SanitizerConfig) => void): HTMLElement {
   const details = el('details', { className: 'settings' })
   const summary = el('summary')
-  summary.textContent = 'Settings'
+  summary.textContent = 'Advanced Settings'
   details.appendChild(summary)
 
   const form = el('div', { className: 'settings-form' })
@@ -257,6 +257,17 @@ function init(): void {
 
   // Full disclaimer
   app.appendChild(createFullDisclaimer())
+
+  // Source code link
+  const footer = el('div', { className: 'footer' })
+  const sourceLink = el('a', {
+    href: 'https://github.com/bakerboy448/compose-sanitizer',
+    target: '_blank',
+    rel: 'noopener noreferrer',
+  })
+  sourceLink.textContent = 'Source code on GitHub'
+  footer.appendChild(sourceLink)
+  app.appendChild(footer)
 
   // Sanitize handler
   sanitizeBtn.addEventListener('click', () => {
