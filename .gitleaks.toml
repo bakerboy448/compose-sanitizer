@@ -1,0 +1,13 @@
+# Gitleaks configuration
+# https://github.com/gitleaks/gitleaks
+
+title = "compose-debugger gitleaks config"
+
+[allowlist]
+  description = "Global allowlist"
+  paths = [
+    '''node_modules/''',
+    '''dist/''',
+    '''coverage/''',
+    '''package-lock\.json''',
+  ]
