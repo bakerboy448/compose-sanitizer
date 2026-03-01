@@ -166,6 +166,39 @@ services:
     expect(result.stats.anonymizedPaths).toBe(1)
   })
 
+  it('tracks which keys were redacted', () => {
+    const input = `
+services:
+  sonarr:
+    environment:
+      API_KEY: abc123
+      MYSQL_PASSWORD: secret
+      PUID: "1000"
+  radarr:
+    environment:
+      API_KEY: def456
+      NOTIFY: user@example.com
+`
+    const result = redactCompose(input)
+    expect(result.stats.redactedKeys).toContain('API_KEY')
+    expect(result.stats.redactedKeys).toContain('MYSQL_PASSWORD')
+    expect(result.stats.redactedKeys).toContain('NOTIFY')
+    expect(result.stats.redactedKeys).toHaveLength(4)
+  })
+
+  it('tracks redacted keys for array-style env vars', () => {
+    const input = `
+services:
+  app:
+    environment:
+      - 'SECRET_TOKEN=myvalue'
+      - 'PUID=1000'
+`
+    const result = redactCompose(input)
+    expect(result.stats.redactedKeys).toContain('SECRET_TOKEN')
+    expect(result.stats.redactedKeys).toHaveLength(1)
+  })
+
   it('handles env vars without values in dict style', () => {
     const input = `
 services:

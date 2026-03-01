@@ -19,10 +19,10 @@ function sanitize(raw: string, config: SanitizerConfig): {
   output: string | null
   parsed: Record<string, unknown> | null
   error: string | null
-  stats: { redactedEnvVars: number; redactedEmails: number; anonymizedPaths: number }
+  stats: { redactedEnvVars: number; redactedEmails: number; anonymizedPaths: number; redactedKeys: readonly string[] }
   advisories: readonly Advisory[]
 } {
-  const emptyStats = { redactedEnvVars: 0, redactedEmails: 0, anonymizedPaths: 0 }
+  const emptyStats = { redactedEnvVars: 0, redactedEmails: 0, anonymizedPaths: 0, redactedKeys: [] as string[] }
 
   const extracted = extractYaml(raw)
   if (extracted.error !== null || extracted.yaml === null) {
@@ -78,9 +78,12 @@ function renderAdvisories(advisories: readonly Advisory[]): HTMLElement {
   return container
 }
 
-function renderStats(stats: { redactedEnvVars: number; redactedEmails: number; anonymizedPaths: number }): string {
+function renderStats(stats: { redactedEnvVars: number; redactedEmails: number; anonymizedPaths: number; redactedKeys: readonly string[] }): string {
   const parts: string[] = []
-  if (stats.redactedEnvVars > 0) parts.push(`${stats.redactedEnvVars} env var${stats.redactedEnvVars > 1 ? 's' : ''} redacted`)
+  if (stats.redactedEnvVars > 0) {
+    const keyList = stats.redactedKeys.length > 0 ? ` (${[...new Set(stats.redactedKeys)].join(', ')})` : ''
+    parts.push(`${stats.redactedEnvVars} env var${stats.redactedEnvVars > 1 ? 's' : ''} redacted${keyList}`)
+  }
   if (stats.redactedEmails > 0) parts.push(`${stats.redactedEmails} email${stats.redactedEmails > 1 ? 's' : ''} redacted`)
   if (stats.anonymizedPaths > 0) parts.push(`${stats.anonymizedPaths} path${stats.anonymizedPaths > 1 ? 's' : ''} anonymized`)
   return parts.length > 0 ? parts.join(', ') : 'No sensitive values detected'
@@ -148,12 +151,84 @@ function init(): void {
   // Header
   const header = el('header')
   const h1 = el('h1')
-  h1.textContent = 'Compose Debugger'
+  h1.textContent = 'Docker Compose Debugger'
   header.appendChild(h1)
+  const subtitle = el('p')
+  subtitle.textContent = 'Paste your Docker Compose output to get a clean, readable breakdown — sensitive values redacted, noise stripped, misconfigurations flagged.'
+  subtitle.style.color = 'var(--text-muted)'
+  subtitle.style.fontSize = '0.9rem'
+  subtitle.style.marginTop = '0.25rem'
+  header.appendChild(subtitle)
   app.appendChild(header)
 
   // Short notice
   app.appendChild(createShortNotice())
+
+  // Help commands (copyable)
+  const helpBox = el('div', { className: 'notice' })
+  helpBox.style.whiteSpace = 'normal'
+  const helpIntro = el('p')
+  helpIntro.textContent = 'Run one of these commands, then paste the output below:'
+  helpIntro.style.marginBottom = '0.5rem'
+  helpIntro.style.fontWeight = '500'
+  helpIntro.style.color = 'var(--text)'
+  helpBox.appendChild(helpIntro)
+
+  const commands = [
+    { label: 'docker-autocompose (recommended)', cmd: 'docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/red5d/docker-autocompose <container_name>' },
+    { label: 'docker compose config', cmd: 'docker compose config' },
+  ]
+  for (const { label, cmd } of commands) {
+    const row = el('div')
+    row.style.marginBottom = '0.4rem'
+    const labelSpan = el('span')
+    labelSpan.textContent = label + ':'
+    labelSpan.style.fontSize = '0.8rem'
+    labelSpan.style.color = 'var(--text-muted)'
+    labelSpan.style.display = 'block'
+    row.appendChild(labelSpan)
+
+    const cmdWrap = el('div')
+    cmdWrap.style.display = 'flex'
+    cmdWrap.style.alignItems = 'center'
+    cmdWrap.style.gap = '0.5rem'
+
+    const code = el('code')
+    code.textContent = cmd
+    code.style.fontFamily = 'var(--mono)'
+    code.style.fontSize = '0.8rem'
+    code.style.background = 'var(--bg)'
+    code.style.padding = '0.3rem 0.5rem'
+    code.style.borderRadius = '4px'
+    code.style.display = 'block'
+    code.style.overflowX = 'auto'
+    code.style.userSelect = 'all'
+    code.style.cursor = 'pointer'
+    cmdWrap.appendChild(code)
+
+    const copyBtn = el('button', { className: 'btn btn-secondary' })
+    copyBtn.textContent = 'Copy'
+    copyBtn.style.padding = '0.2rem 0.5rem'
+    copyBtn.style.fontSize = '0.75rem'
+    copyBtn.style.flexShrink = '0'
+    copyBtn.addEventListener('click', async () => {
+      const ok = await copyToClipboard(cmd)
+      copyBtn.textContent = ok ? 'Copied!' : 'Failed'
+      setTimeout(() => { copyBtn.textContent = 'Copy' }, 1500)
+    })
+    cmdWrap.appendChild(copyBtn)
+
+    row.appendChild(cmdWrap)
+    helpBox.appendChild(row)
+  }
+
+  const helpNote = el('p')
+  helpNote.textContent = 'You can also paste raw docker-compose.yml content directly.'
+  helpNote.style.marginTop = '0.4rem'
+  helpNote.style.fontSize = '0.8rem'
+  helpNote.style.color = 'var(--text-muted)'
+  helpBox.appendChild(helpNote)
+  app.appendChild(helpBox)
 
   // Input
   const inputLabel = el('label', { for: 'input' })
@@ -165,7 +240,6 @@ function init(): void {
     rows: '18',
     spellcheck: 'false',
   })
-  input.placeholder = 'Paste output from:\n  docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/red5d/docker-autocompose <container>\n  docker compose config\n  or raw docker-compose.yml content'
   app.appendChild(input)
 
   // Sanitize button
