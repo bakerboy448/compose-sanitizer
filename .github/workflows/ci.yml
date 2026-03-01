@@ -18,3 +18,39 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npx vitest run --coverage --passWithNoTests
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - run: npm ci
+
+      # Dependency audit — fail on high/critical vulnerabilities
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+      # Secret scanning with gitleaks
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      # Build output size gate — single-file HTML should stay under 150 KB
+      - name: Build and check output size
+        run: |
+          npm run build
+          size=$(stat -c%s dist/index.html)
+          echo "Build output: ${size} bytes"
+          if [ "$size" -gt 153600 ]; then
+            echo "::error::Build output exceeds 150 KB (${size} bytes) — unexpected bloat"
+            exit 1
+          fi
