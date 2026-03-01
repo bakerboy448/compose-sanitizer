@@ -1,6 +1,6 @@
-# Compose Debugger
+# Docker Compose Debugger
 
-Browser-based tool for parsing Docker Compose output into structured debugging views. Paste output from `docker-autocompose`, `docker compose config`, or raw `docker-compose.yml` — get sanitized YAML, per-service cards, and a markdown table ready for Discord or GitHub support channels.
+Browser-based tool that turns messy Docker Compose output into clean, readable debugging views. Paste output from `docker-autocompose`, `docker compose config`, or raw `docker-compose.yml` — get sanitized YAML with sensitive values redacted, per-service cards, volume comparison tables, and a markdown table ready for Discord or GitHub support channels.
 
 **Live:** [bakerboy448.github.io/compose-sanitizer](https://bakerboy448.github.io/compose-sanitizer/)
 
