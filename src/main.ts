@@ -176,7 +176,6 @@ function init(): void {
 
   const commands = [
     { label: 'docker-autocompose (recommended)', cmd: 'docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/red5d/docker-autocompose <container_name>' },
-    { label: 'docker compose config', cmd: 'docker compose config' },
   ]
   for (const { label, cmd } of commands) {
     const row = el('div')
@@ -358,13 +357,21 @@ function init(): void {
   })
   actions.appendChild(mdBtn)
 
-  const pbBtn = el('button', { className: 'btn btn-secondary' })
+  const pbBtn = el('button', { className: 'btn btn-secondary', title: 'Tip: Set expiry to 1 week or longer so support can review it' })
   pbBtn.textContent = 'Open PrivateBin'
   pbBtn.addEventListener('click', async () => {
     await copyToClipboard(output.value)
     openPrivateBin()
   })
   actions.appendChild(pbBtn)
+
+  const logsBtn = el('button', { className: 'btn btn-secondary' })
+  logsBtn.textContent = 'Open logs.notifiarr.com'
+  logsBtn.addEventListener('click', async () => {
+    await copyToClipboard(output.value)
+    window.open('https://logs.notifiarr.com/', '_blank', 'noopener,noreferrer')
+  })
+  actions.appendChild(logsBtn)
 
   const gistBtn = el('button', { className: 'btn btn-secondary' })
   gistBtn.textContent = 'Open GitHub Gist'
