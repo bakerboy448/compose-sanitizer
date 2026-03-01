@@ -1,7 +1,7 @@
 # Gitleaks configuration
 # https://github.com/gitleaks/gitleaks
 
-title = "compose-debugger gitleaks config"
+title = "docker-compose-debugger gitleaks config"
 
 [allowlist]
   description = "Global allowlist"

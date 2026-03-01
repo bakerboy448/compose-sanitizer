@@ -48,7 +48,7 @@ jobs:
       - run: npx tsc --noEmit
       - run: npx vitest run --passWithNoTests
       - run: npm run build
-      - run: cp dist/index.html compose-sanitizer.html
+      - run: cp dist/index.html docker-compose-debugger.html
 
       - name: Commit version bump and tag
         env:
@@ -64,6 +64,6 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ inputs.version }}
-          files: compose-sanitizer.html
+          files: docker-compose-debugger.html
           generate_release_notes: true
           prerelease: false

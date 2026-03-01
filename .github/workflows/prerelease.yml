@@ -42,7 +42,7 @@ jobs:
 
       - run: npm ci
       - run: npm run build
-      - run: cp dist/index.html compose-sanitizer.html
+      - run: cp dist/index.html docker-compose-debugger.html
 
       - name: Create pre-release tag
         env:
@@ -54,6 +54,6 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.prerelease.outputs.tag }}
-          files: compose-sanitizer.html
+          files: docker-compose-debugger.html
           generate_release_notes: true
           prerelease: true
