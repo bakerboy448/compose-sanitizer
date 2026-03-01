@@ -2,7 +2,7 @@
 
 Browser-based tool that turns messy Docker Compose output into clean, readable debugging views. Paste output from `docker-autocompose`, `docker compose config`, or raw `docker-compose.yml` — get sanitized YAML with sensitive values redacted, per-service cards, volume comparison tables, and a markdown table ready for Discord or GitHub support channels.
 
-**Live:** [bakerboy448.github.io/compose-sanitizer](https://bakerboy448.github.io/compose-sanitizer/)
+**Live:** [baker-scripts.github.io/docker-compose-debugger](https://baker-scripts.github.io/docker-compose-debugger/)
 
 ## Features
 
@@ -56,7 +56,7 @@ The Advanced Settings panel allows custom sensitive patterns (regex) and safe ke
 
 ## Self-Hosting
 
-Download `compose-sanitizer.html` from the [latest release](https://github.com/bakerboy448/compose-sanitizer/releases/latest) and open it in any browser. Everything runs client-side in a single HTML file — no server, no network requests, no data leaves your browser.
+Download `docker-compose-debugger.html` from the [latest release](https://github.com/baker-scripts/docker-compose-debugger/releases/latest) and open it in any browser. Everything runs client-side in a single HTML file — no server, no network requests, no data leaves your browser.
 
 ## Development
 

@@ -393,7 +393,7 @@ function init(): void {
   // Source code link
   const footer = el('div', { className: 'footer' })
   const sourceLink = el('a', {
-    href: 'https://github.com/bakerboy448/compose-sanitizer',
+    href: 'https://github.com/baker-scripts/docker-compose-debugger',
     target: '_blank',
     rel: 'noopener noreferrer',
   })
